@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grade 6 Math: The Zone Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Noto+Sans+Sinhala:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', 'Noto Sans Sinhala', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile games */
+        }
+
+        .digit-card {
+            transition: all 0.2s ease;
+        }
+        .digit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .digit-card:active {
+            transform: scale(0.95);
+        }
+
+        .zone-box {
+            transition: all 0.3s ease;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(0); }
+        }
+        .animate-bounce-custom {
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        .correct-pulse {
+            animation: pulse-green 1s infinite;
+            border-color: #22c55e !important;
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .wrong-shake {
+            animation: shake 0.3s ease-in-out;
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+        }
+
+        /* Runner Game Styles */
+        #runnerCanvas {
+            background: #1e293b;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            height: 400px; /* Fixed height for consistency */
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-cubes text-2xl text-yellow-300"></i>
+                <h1 class="text-xl md:text-2xl font-bold" data-key="appTitle">Number Zone Master</h1>
+            </div>
+            
+            <div class="flex gap-2 items-center flex-wrap justify-center">
+                <!-- Mode Switcher -->
+                <div class="bg-blue-800 p-1 rounded-lg flex">
+                    <button onclick="switchMode('learn')" id="btn-learn" class="px-3 py-1 rounded-md text-sm font-bold bg-white text-blue-900 shadow transition-all">
+                        <i class="fas fa-book-open mr-1"></i> <span data-key="modeLearn">Learn</span>
+                    </button>
+                    <button onclick="switchMode('play')" id="btn-play" class="px-3 py-1 rounded-md text-sm font-bold text-blue-200 hover:text-white transition-all">
+                        <i class="fas fa-puzzle-piece mr-1"></i> <span data-key="modePlay">Quiz</span>
+                    </button>
+                    <button onclick="switchMode('runner')" id="btn-runner" class="px-3 py-1 rounded-md text-sm font-bold text-blue-200 hover:text-white transition-all">
+                        <i class="fas fa-running mr-1"></i> <span data-key="modeRunner">Runner</span>
+                    </button>
+                </div>
+
+                <!-- Language Toggle -->
+                <button onclick="toggleLanguage()" class="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-1 px-3 rounded-full text-sm border-2 border-yellow-200 shadow transition-transform active:scale-95 flex items-center gap-2">
+                    <i class="fas fa-language"></i> <span id="langLabel">සිංහල</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <!-- ================= LEARN MODE ================= -->
+        <div id="learn-mode" class="animate-slide-in">
+            
+            <!-- Input Section -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                <label class="block text-slate-500 text-sm font-bold mb-2 uppercase tracking-wide" data-key="enterNumber">
+                    Enter a Number
+                </label>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="numberInput" 
+                           class="flex-1 text-3xl md:text-5xl font-bold text-slate-800 border-2 border-slate-200 rounded-xl p-4 focus:border-blue-500 focus:outline-none placeholder-slate-300 tracking-widest text-right"
+                           placeholder="1444885630" 
+                           maxlength="15"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, ''); processNumber();">
+                    
+                    <button onclick="clearInput()" class="bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold py-4 px-6 rounded-xl transition-colors">
+                        <i class="fas fa-trash-alt"></i> <span data-key="clear">Clear</span>
+                    </button>
+                </div>
+
+                <!-- Quick Access Buttons -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="text-xs text-slate-400 uppercase font-bold self-center mr-2" data-key="examples">Examples:</span>
+                    <button onclick="setNumber('149600000')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 text-sm font-semibold py-1 px-3 rounded-full border border-blue-200 transition">
+                        🌍 <span data-key="earth">Earth</span>
+                    </button>
+                    <button onclick="setNumber('4495000000')" class="bg-purple-50 hover:bg-purple-100 text-purple-600 text-sm font-semibold py-1 px-3 rounded-full border border-purple-200 transition">
+                        ❄️ <span data-key="neptune">Neptune</span>
+                    </button>
+                    <button onclick="setNumber('3954871')" class="bg-green-50 hover:bg-green-100 text-green-600 text-sm font-semibold py-1 px-3 rounded-full border border-green-200 transition">
+                        🦠 <span data-key="population">Population</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Display Section -->
+            <div id="zoneDisplay" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Standard Form -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-indigo-500 animate-slide-in" style="animation-delay: 0.1s;">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center">
+                            <i class="fas fa-columns mr-2 text-indigo-500"></i> <span data-key="standardForm">Standard Form & Zones</span>
+                        </h2>
+                        <div id="zonesContainer" class="flex flex-wrap justify-center items-end gap-2 md:gap-4 mb-4"></div>
+                        <div class="text-center mt-4 text-slate-500 text-sm" data-key="zoneHint">
+                            Each "Zone" holds exactly 3 digits.
+                        </div>
+                    </div>
+
+                    <!-- Read Aloud -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-pink-500 animate-slide-in" style="animation-delay: 0.2s;">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center">
+                            <i class="fas fa-bullhorn mr-2 text-pink-500"></i> <span data-key="readAloud">Read Aloud</span>
+                        </h2>
+                        <p id="wordOutput" class="text-lg md:text-xl font-medium text-slate-800 leading-relaxed capitalize mb-2"></p>
+                        <p id="wordOutputSi" class="text-lg md:text-xl font-medium text-indigo-700 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <!-- Digit Detective -->
+                <div class="bg-white rounded-2xl shadow-lg p-6 border-t-8 border-yellow-400 animate-slide-in" style="animation-delay: 0.3s;">
+                    <h2 class="text-lg font-bold text-slate-700 mb-6 flex items-center justify-between">
+                        <div>
+                            <i class="fas fa-search-dollar mr-2 text-yellow-500"></i> 
+                            <span data-key="digitDetective">Digit Detective</span>
+                        </div>
+                    </h2>
+
+                    <div id="interactiveDigits" class="flex flex-wrap justify-center gap-2 mb-8"></div>
+
+                    <div id="detailCard" class="hidden bg-slate-50 rounded-xl p-6 border border-slate-200">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                            <div class="p-4 bg-white rounded-lg shadow-sm">
+                                <div class="text-xs text-slate-400 uppercase font-bold mb-1" data-key="digit">Digit</div>
+                                <div id="detailDigit" class="text-5xl font-bold text-blue-600">5</div>
+                            </div>
+                            <div class="p-4 bg-white rounded-lg shadow-sm">
+                                <div class="text-xs text-slate-400 uppercase font-bold mb-1" data-key="placeName">Place Name</div>
+                                <div id="detailPlace" class="text-xl md:text-2xl font-bold text-purple-600">Millions</div>
+                                <div id="detailPlaceSi" class="text-lg text-purple-500 font-bold mt-1">මිලියන</div>
+                            </div>
+                            <div class="p-4 bg-white rounded-lg shadow-sm border-2 border-green-100">
+                                <div class="text-xs text-slate-400 uppercase font-bold mb-1" data-key="repValue">Represented Value</div>
+                                <div id="detailValue" class="text-xl md:text-3xl font-bold text-green-600 break-all">5,000,000</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="emptyState" class="text-center py-8 text-slate-400 italic">
+                        <i class="fas fa-hand-pointer mr-1"></i> <span data-key="clickHint">Click on any number block above!</span>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Welcome State -->
+            <div id="welcomeMessage" class="text-center mt-20 opacity-50">
+                <i class="fas fa-keyboard text-6xl mb-4 text-slate-300"></i>
+                <p class="text-xl" data-key="startTyping">Type a number to begin.</p>
+            </div>
+        </div>
+
+        <!-- ================= QUIZ MODE (GAME 1) ================= -->
+        <div id="play-mode" class="hidden animate-slide-in">
+            
+            <div id="quiz-container" class="bg-white rounded-3xl shadow-2xl p-6 md:p-10 text-center relative overflow-hidden">
+                <!-- Scoreboard -->
+                <div class="absolute top-4 right-6 flex flex-col items-end">
+                    <div class="text-xs text-slate-400 font-bold uppercase" data-key="score">SCORE</div>
+                    <div id="scoreDisplay" class="text-4xl font-black text-blue-600">0</div>
+                    <div class="text-xs text-slate-500 mt-1">Q: <span id="questionCount">1</span>/10</div>
+                </div>
+
+                <div class="mb-8">
+                    <div class="inline-block bg-yellow-100 text-yellow-800 px-4 py-1 rounded-full text-sm font-bold mb-4">
+                        <i class="fas fa-star mr-1"></i> <span data-key="challenge">Challenge Mode</span>
+                    </div>
+                    
+                    <!-- The Question -->
+                    <h2 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2" id="gameQuestion">
+                        Find the digit in the Millions Place
+                    </h2>
+                    <p class="text-lg text-indigo-600 font-medium" id="gameQuestionSi">
+                        මිලියන ස්ථානයේ ඇති ඉලක්කම සොයන්න
+                    </p>
+                </div>
+
+                <!-- The Game Number Interaction -->
+                <div id="gameDigitsContainer" class="flex flex-wrap justify-center gap-3 mb-10 min-h-[80px]">
+                    <!-- Game digits go here -->
+                </div>
+
+                <div id="gameFeedback" class="h-12 flex items-center justify-center">
+                    <p class="text-slate-400 italic" data-key="gameHint">Click the correct digit box above!</p>
+                </div>
+
+                <button onclick="nextRound()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform active:scale-95 hidden" id="nextBtn">
+                    <span data-key="nextQuestion">Next Question</span> <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+
+             <!-- QUIZ END SCREEN -->
+             <div id="quiz-end-screen" class="hidden bg-white rounded-3xl shadow-2xl p-10 text-center animate-slide-in">
+                <i class="fas fa-trophy text-6xl text-yellow-400 mb-4 animate-bounce-custom"></i>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2" data-key="quizComplete">Mission Complete!</h2>
+                <p class="text-slate-500 mb-6" data-key="finalScore">Your Final Score</p>
+                
+                <div class="text-6xl font-black text-blue-600 mb-6" id="finalScoreDisplay">0</div>
+                
+                <div class="flex justify-center gap-2 mb-8 text-yellow-400 text-2xl" id="starRating">
+                    <!-- Stars injected via JS -->
+                </div>
+
+                <button onclick="resetQuiz()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform active:scale-95">
+                    <i class="fas fa-redo mr-2"></i> <span data-key="playAgain">Play Again</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- ================= RUNNER MODE (GAME 2) ================= -->
+        <div id="runner-mode" class="hidden animate-slide-in">
+            <div class="bg-slate-800 rounded-2xl shadow-2xl p-4 md:p-6 text-white relative">
+                
+                <!-- Runner HUD -->
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-2">
+                         <div class="bg-slate-700 px-3 py-1 rounded text-xs font-bold uppercase text-slate-400" data-key="lives">LIVES</div>
+                         <div id="runnerLives" class="text-red-400 text-xl">❤️❤️❤️</div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="text-2xl font-bold text-yellow-400" id="runnerScore">0</div>
+                        <div class="text-[10px] text-slate-500">POINTS</div>
+                    </div>
+                </div>
+
+                <!-- Runner Question Area -->
+                <div class="bg-slate-700 rounded-xl p-4 mb-4 text-center border-2 border-slate-600">
+                    <p class="text-slate-400 text-sm mb-1 uppercase tracking-wider" data-key="runnerInstruction">Identify the Zone:</p>
+                    <div id="runnerQuestion" class="text-2xl md:text-3xl font-bold font-mono tracking-widest text-white">
+                        1,450,<span class="text-yellow-400 border-b-4 border-yellow-400">0</span>00
+                    </div>
+                    <div id="runnerQuestionSi" class="text-sm text-indigo-300 mt-1"></div>
+                </div>
+
+                <!-- Canvas -->
+                <div class="relative w-full overflow-hidden rounded-xl border border-slate-700">
+                    <canvas id="runnerCanvas" width="800" height="400"></canvas>
+                    
+                    <!-- Overlay for Start/End -->
+                    <div id="runnerOverlay" class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center z-10">
+                        <h2 class="text-4xl font-bold text-white mb-4" id="runnerTitle">ZONE RUNNER</h2>
+                        <p class="text-slate-300 mb-8 max-w-xs text-center" id="runnerDesc">Dodge the wrong answers! Use Left/Right keys to switch lanes.</p>
+                        <button onclick="startRunnerGame()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transition-transform active:scale-95 animate-bounce">
+                            <i class="fas fa-play mr-2"></i> <span data-key="startRun">START RUN</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Touch Controls (Mobile) -->
+                <div class="flex justify-between mt-4 gap-4 md:hidden">
+                    <button class="flex-1 bg-slate-700 p-6 rounded-xl active:bg-slate-600" ontouchstart="moveRunner(-1)" onclick="moveRunner(-1)">
+                        <i class="fas fa-arrow-left text-2xl"></i>
+                    </button>
+                    <button class="flex-1 bg-slate-700 p-6 rounded-xl active:bg-slate-600" ontouchstart="moveRunner(1)" onclick="moveRunner(1)">
+                        <i class="fas fa-arrow-right text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="hidden md:flex justify-center mt-2 text-slate-500 text-sm">
+                    <i class="fas fa-keyboard mr-2"></i> Use Left / Right Arrow Keys
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ================= DATA & TRANSLATIONS =================
+        let currentLang = 'en';
+        let currentMode = 'learn';
+        
+        // Quiz State
+        let quizScore = 0;
+        let quizQuestionCount = 0;
+        let quizCurrentGameData = null;
+        const MAX_QUIZ_QUESTIONS = 10;
+
+        // Runner State
+        let runnerActive = false;
+        let runnerScore = 0;
+        let runnerLives = 3;
+        let runnerSpeed = 3;
+        let runnerLane = 1; // 0: Left, 1: Center, 2: Right
+        let runnerCtx;
+        let runnerCanvas;
+        let gates = []; // Array of active gates
+        let runnerAnimationId;
+        let runnerTargetZone = ""; // The correct answer for current wave
+        let runnerTargetZoneSi = "";
+        let runnerQuestionNumber = "";
+
+        const translations = {
+            appTitle: { en: "Number Zone Master", si: "සංඛ්‍යා කලාප මාස්ටර්" },
+            modeLearn: { en: "Learn", si: "ඉගෙනුම" },
+            modePlay: { en: "Quiz", si: "ප්‍රශ්න" },
+            modeRunner: { en: "Runner", si: "දිවීම" },
+            enterNumber: { en: "Enter a Number (Digits only)", si: "සංඛ්‍යාවක් ඇතුළත් කරන්න (ඉලක්කම් පමණි)" },
+            clear: { en: "Clear", si: "මකන්න" },
+            examples: { en: "BOOK EXAMPLES:", si: "පොතෙන් උදාහරණ:" },
+            earth: { en: "Earth", si: "පෘථිවිය" },
+            neptune: { en: "Neptune", si: "නෙප්චූන්" },
+            population: { en: "Population", si: "ජනගහනය" },
+            standardForm: { en: "Standard Form & Zones", si: "සම්මත ආකාරය සහ කලාප" },
+            readAloud: { en: "Read Aloud", si: "කියවමු" },
+            zoneHint: { en: "Each 'Zone' holds exactly 3 digits.", si: "එක් කලාපයකට ඉලක්කම් 3ක් ඇතුළත් වේ." },
+            digitDetective: { en: "Digit Detective", si: "ඉලක්කම් පරීක්ෂක" },
+            clickHint: { en: "Click on any number block above!", si: "ඉහත ඇති ඕනෑම ඉලක්කමක් මත ඔබන්න!" },
+            digit: { en: "DIGIT", si: "ඉලක්කම" },
+            placeName: { en: "PLACE NAME", si: "ස්ථානයේ නම" },
+            repValue: { en: "REPRESENTED VALUE", si: "නිරූපිත අගය" },
+            startTyping: { en: "Type a number to begin.", si: "ආරම්භ කිරීමට ඉලක්කම් ටයිප් කරන්න." },
+            challenge: { en: "Challenge Mode", si: "අභියෝගය" },
+            score: { en: "SCORE", si: "ලකුණු" },
+            gameHint: { en: "Click the correct digit box above!", si: "නිවැරදි ඉලක්කම මත ඔබන්න!" },
+            nextQuestion: { en: "Next Question", si: "ඊළඟ ප්‍රශ්නය" },
+            correct: { en: "Correct! Awesome!", si: "නිවැරදියි! නියමයි!" },
+            wrong: { en: "Try again!", si: "නැවත උත්සාහ කරන්න!" },
+            quizComplete: { en: "Mission Complete!", si: "මෙහෙයුම සම්පූර්ණයි!" },
+            finalScore: { en: "Your Final Score", si: "ඔබේ අවසාන ලකුණු" },
+            playAgain: { en: "Play Again", si: "නැවත ක්‍රීඩා කරන්න" },
+            lives: { en: "LIVES", si: "ජීවිත" },
+            runnerInstruction: { en: "RUN THROUGH THE CORRECT ZONE:", si: "නිවැරදි කලාපය හරහා දුවන්න:" },
+            startRun: { en: "START RUN", si: "දිවීම අරඹන්න" },
+            gameOver: { en: "GAME OVER", si: "ක්‍රීඩාව අවසන්" }
+        };
+
+        const placeData = [
+            { val: 1, en: "Units (Ones)", si: "එකස්ථානය", zoneEn: "Units", zoneSi: "ඒකක" },
+            { val: 10, en: "Tens", si: "දහයස්ථානය", zoneEn: "Units", zoneSi: "ඒකක" },
+            { val: 100, en: "Hundreds", si: "සියස්ථානය", zoneEn: "Units", zoneSi: "ඒකක" },
+            { val: 1000, en: "Thousands", si: "දහස්ථානය", zoneEn: "Thousands", zoneSi: "දහස්" },
+            { val: 10000, en: "Ten Thousands", si: "දස දහස්ථානය", zoneEn: "Thousands", zoneSi: "දහස්" },
+            { val: 100000, en: "Hundred Thousands", si: "සිය දහස්ථානය", zoneEn: "Thousands", zoneSi: "දහස්" },
+            { val: 1000000, en: "Millions", si: "මිලියනස්ථානය", zoneEn: "Millions", zoneSi: "මිලියන" },
+            { val: 10000000, en: "Ten Millions", si: "දස මිලියනස්ථානය", zoneEn: "Millions", zoneSi: "මිලියන" },
+            { val: 100000000, en: "Hundred Millions", si: "සිය මිලියනස්ථානය", zoneEn: "Millions", zoneSi: "මිලියන" },
+            { val: 1000000000, en: "Billions", si: "බිලියනස්ථානය", zoneEn: "Billions", zoneSi: "බිලියන" },
+            { val: 10000000000, en: "Ten Billions", si: "දස බිලියනස්ථානය", zoneEn: "Billions", zoneSi: "බිලියන" },
+            { val: 100000000000, en: "Hundred Billions", si: "සිය බිලියනස්ථානය", zoneEn: "Billions", zoneSi: "බිලියන" },
+            { val: 1000000000000, en: "Trillions", si: "ට්‍රිලියන", zoneEn: "Trillions", zoneSi: "ට්‍රිලියන" }
+        ];
+
+        // ================= UI LOGIC =================
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'si' : 'en';
+            document.getElementById('langLabel').innerText = currentLang === 'en' ? 'සිංහල' : 'English';
+            updateUIText();
+            
+            // Re-render current content
+            if (currentMode === 'learn') processNumber();
+            else if (currentMode === 'play' && quizCurrentGameData) updateGameQuestionText();
+            else if (currentMode === 'runner') updateRunnerUI();
+        }
+
+        function updateUIText() {
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[key]) {
+                    el.innerText = translations[key][currentLang];
+                }
+            });
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            // Reset Buttons
+            ['learn', 'play', 'runner'].forEach(m => {
+                 const btn = document.getElementById(`btn-${m}`);
+                 if(m === mode) {
+                    btn.className = "px-3 py-1 rounded-md text-sm font-bold bg-white text-blue-900 shadow transition-all";
+                 } else {
+                    btn.className = "px-3 py-1 rounded-md text-sm font-bold text-blue-200 hover:text-white transition-all";
+                 }
+                 document.getElementById(`${m}-mode`).classList.add('hidden');
+            });
+
+            document.getElementById(`${mode}-mode`).classList.remove('hidden');
+
+            if (mode === 'play') {
+                if(!quizCurrentGameData && quizScore === 0) resetQuiz();
+            } else if (mode === 'runner') {
+                initRunner();
+            } else {
+                // Pause runner if leaving
+                runnerActive = false;
+            }
+        }
+
+        // ================= LEARN MODE LOGIC =================
+
+        function setNumber(num) {
+            document.getElementById('numberInput').value = num;
+            processNumber();
+        }
+
+        function clearInput() {
+            document.getElementById('numberInput').value = '';
+            processNumber();
+            document.getElementById('detailCard').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+
+        function processNumber() {
+            const inputStr = document.getElementById('numberInput').value;
+            const welcome = document.getElementById('welcomeMessage');
+            const display = document.getElementById('zoneDisplay');
+
+            if (inputStr.length === 0) {
+                welcome.classList.remove('hidden');
+                display.classList.add('hidden');
+                return;
+            }
+
+            welcome.classList.add('hidden');
+            display.classList.remove('hidden');
+
+            renderZones(inputStr);
+            renderInteractiveDigits(inputStr);
+            
+            // Text to speech prep
+            const numVal = parseInt(inputStr);
+            if (!isNaN(numVal)) {
+                document.getElementById('wordOutput').innerText = convertToWords(numVal);
+                document.getElementById('wordOutputSi').innerText = currentLang === 'si' ? convertToWordsSi(inputStr) : '';
+            }
+        }
+
+        function renderZones(str) {
+            const container = document.getElementById('zonesContainer');
+            container.innerHTML = '';
+            
+            let reversed = str.split('').reverse().join('');
+            let chunks = [];
+            for (let i = 0; i < reversed.length; i += 3) {
+                chunks.push(reversed.substring(i, i + 3).split('').reverse().join(''));
+            }
+            
+            const zoneColors = [
+                'bg-blue-100 border-blue-300 text-blue-800', 
+                'bg-green-100 border-green-300 text-green-800', 
+                'bg-red-100 border-red-300 text-red-800', 
+                'bg-purple-100 border-purple-300 text-purple-800',
+                'bg-yellow-100 border-yellow-300 text-yellow-800'
+            ];
+
+            for (let i = chunks.length - 1; i >= 0; i--) {
+                const chunk = chunks[i];
+                const colorClass = zoneColors[i] || 'bg-gray-100';
+                
+                const zoneName = i < 5 ? (currentLang === 'si' ? placeData[i*3].zoneSi : placeData[i*3].zoneEn) : 'Zone';
+                const label = currentLang === 'si' ? `${zoneName} කලාපය` : `${zoneName} Zone`;
+
+                const zoneDiv = document.createElement('div');
+                zoneDiv.className = `zone-box flex flex-col items-center p-2 rounded-lg border-b-4 ${colorClass} min-w-[80px] md:min-w-[100px]`;
+                
+                zoneDiv.innerHTML = `
+                    <div class="text-3xl md:text-4xl font-bold tracking-widest">${chunk}</div>
+                    <div class="text-[10px] md:text-xs uppercase font-bold mt-1 opacity-70">${label}</div>
+                `;
+                container.appendChild(zoneDiv);
+            }
+        }
+
+        function renderInteractiveDigits(str) {
+            const container = document.getElementById('interactiveDigits');
+            container.innerHTML = '';
+            const length = str.length;
+
+            for (let i = 0; i < length; i++) {
+                const digit = str[i];
+                const placeIndex = length - 1 - i;
+                
+                const btn = document.createElement('button');
+                let zoneIdx = Math.floor(placeIndex / 3);
+                let btnColor = '';
+                
+                if (zoneIdx === 0) btnColor = 'bg-blue-500 hover:bg-blue-600';
+                else if (zoneIdx === 1) btnColor = 'bg-green-500 hover:bg-green-600';
+                else if (zoneIdx === 2) btnColor = 'bg-red-500 hover:bg-red-600';
+                else if (zoneIdx === 3) btnColor = 'bg-purple-500 hover:bg-purple-600';
+                else btnColor = 'bg-slate-500';
+
+                btn.className = `digit-card w-10 h-12 md:w-14 md:h-16 rounded-lg ${btnColor} text-white text-2xl md:text-3xl font-bold shadow-md flex items-center justify-center`;
+                btn.innerText = digit;
+                
+                btn.onclick = () => showDetail(digit, placeIndex);
+                container.appendChild(btn);
+            }
+        }
+
+        function showDetail(digit, placeIndex) {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('detailCard').classList.remove('hidden');
+            document.getElementById('detailCard').classList.add('animate-slide-in');
+
+            document.getElementById('detailDigit').innerText = digit;
+
+            const data = placeData[placeIndex] || { en: "Unknown", si: "නොදනී", val: 0 };
+            document.getElementById('detailPlace').innerText = data.en;
+            document.getElementById('detailPlaceSi').innerText = data.si;
+
+            const baseValue = BigInt(data.val);
+            const digitValue = BigInt(digit);
+            const totalValue = baseValue * digitValue;
+            
+            document.getElementById('detailValue').innerText = totalValue.toLocaleString();
+        }
+
+
+        // ================= QUIZ MODE LOGIC (GAME 1) =================
+        
+        function resetQuiz() {
+            quizScore = 0;
+            quizQuestionCount = 0;
+            document.getElementById('scoreDisplay').innerText = 0;
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('quiz-end-screen').classList.add('hidden');
+            nextRound();
+        }
+
+        function nextRound() {
+            if (quizQuestionCount >= MAX_QUIZ_QUESTIONS) {
+                endQuiz();
+                return;
+            }
+
+            quizQuestionCount++;
+            document.getElementById('questionCount').innerText = quizQuestionCount;
+            
+            document.getElementById('nextBtn').classList.add('hidden');
+            document.getElementById('gameFeedback').innerHTML = `<p class="text-slate-400 italic">${translations.gameHint[currentLang]}</p>`;
+            
+            const len = Math.floor(Math.random() * 9) + 4; // 4 to 12 Digits now (Billions support)
+            let numStr = "";
+            numStr += Math.floor(Math.random() * 9) + 1;
+            for(let i=1; i<len; i++) {
+                numStr += Math.floor(Math.random() * 10);
+            }
+
+            const targetIndex = Math.floor(Math.random() * len);
+            const targetDigit = numStr[targetIndex];
+            const targetPlaceIndex = len - 1 - targetIndex; 
+            
+            quizCurrentGameData = {
+                number: numStr,
+                targetDigit: targetDigit,
+                targetPlaceIndex: targetPlaceIndex,
+                answered: false
+            };
+
+            renderGameDigits(numStr);
+            updateGameQuestionText();
+        }
+
+        function updateGameQuestionText() {
+            if(!quizCurrentGameData) return;
+            const placeInfo = placeData[quizCurrentGameData.targetPlaceIndex];
+            
+            const qEn = `Find the digit in the <span class="text-blue-600">${placeInfo.en}</span>`;
+            const qSi = `<span class="text-blue-600">${placeInfo.si}</span> ඇති ඉලක්කම සොයන්න`;
+
+            document.getElementById('gameQuestion').innerHTML = qEn;
+            document.getElementById('gameQuestionSi').innerHTML = qSi;
+        }
+
+        function renderGameDigits(str) {
+            const container = document.getElementById('gameDigitsContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < str.length; i++) {
+                const digit = str[i];
+                
+                const btn = document.createElement('button');
+                btn.className = `digit-card w-12 h-16 md:w-16 md:h-20 rounded-xl bg-white border-2 border-slate-200 text-slate-700 text-3xl md:text-4xl font-bold shadow-sm flex items-center justify-center hover:border-blue-400`;
+                btn.innerText = digit;
+                btn.dataset.idx = i; 
+                
+                btn.onclick = () => checkAnswer(btn, str.length - 1 - i);
+                container.appendChild(btn);
+            }
+        }
+
+        function checkAnswer(btn, clickedPlaceIndex) {
+            if (quizCurrentGameData.answered) return;
+
+            const isCorrect = clickedPlaceIndex === quizCurrentGameData.targetPlaceIndex;
+            const feedbackDiv = document.getElementById('gameFeedback');
+
+            if (isCorrect) {
+                quizScore += 10;
+                document.getElementById('scoreDisplay').innerText = quizScore;
+                
+                btn.classList.add('correct-pulse');
+                feedbackDiv.innerHTML = `<p class="text-green-600 font-bold text-xl animate-bounce-custom"><i class="fas fa-check-circle"></i> ${translations.correct[currentLang]}</p>`;
+                
+                quizCurrentGameData.answered = true;
+                
+                // Show colors for all zones
+                const container = document.getElementById('gameDigitsContainer');
+                const str = quizCurrentGameData.number;
+                for(let b of container.children) {
+                     const idx = parseInt(b.dataset.idx);
+                     const pIdx = str.length - 1 - idx;
+                     const zIdx = Math.floor(pIdx/3);
+                     if (zIdx === 0) b.style.backgroundColor = '#dbeafe'; 
+                     else if (zIdx === 1) b.style.backgroundColor = '#dcfce7'; 
+                     else if (zIdx === 2) b.style.backgroundColor = '#fee2e2'; 
+                     else if (zIdx === 3) b.style.backgroundColor = '#f3e8ff'; 
+                }
+
+                document.getElementById('nextBtn').classList.remove('hidden');
+
+            } else {
+                btn.classList.add('wrong-shake');
+                setTimeout(() => btn.classList.remove('wrong-shake'), 400);
+                feedbackDiv.innerHTML = `<p class="text-red-500 font-bold"><i class="fas fa-times-circle"></i> ${translations.wrong[currentLang]}</p>`;
+                quizScore = Math.max(0, quizScore - 2); 
+                document.getElementById('scoreDisplay').innerText = quizScore;
+            }
+        }
+
+        function endQuiz() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('quiz-end-screen').classList.remove('hidden');
+            document.getElementById('finalScoreDisplay').innerText = quizScore;
+            
+            // Star Calculation (Max 100)
+            const starDiv = document.getElementById('starRating');
+            starDiv.innerHTML = '';
+            let stars = 0;
+            if(quizScore >= 90) stars = 3;
+            else if(quizScore >= 60) stars = 2;
+            else if(quizScore > 0) stars = 1;
+            
+            for(let i=0; i<3; i++) {
+                if(i < stars) starDiv.innerHTML += '<i class="fas fa-star"></i>';
+                else starDiv.innerHTML += '<i class="far fa-star text-gray-300"></i>';
+            }
+        }
+
+
+        // ================= RUNNER MODE LOGIC (GAME 2) =================
+
+        function initRunner() {
+            runnerCanvas = document.getElementById('runnerCanvas');
+            runnerCtx = runnerCanvas.getContext('2d');
+            
+            // Handle Resizing
+            runnerCanvas.width = runnerCanvas.offsetWidth;
+            runnerCanvas.height = 400; // Fixed height logic
+            
+            // Listen for keyboard
+            window.addEventListener('keydown', handleRunnerInput);
+        }
+
+        function handleRunnerInput(e) {
+            if(!runnerActive) return;
+            if(e.key === 'ArrowLeft') moveRunner(-1);
+            if(e.key === 'ArrowRight') moveRunner(1);
+        }
+
+        function moveRunner(dir) {
+            if(!runnerActive) return;
+            runnerLane += dir;
+            if(runnerLane < 0) runnerLane = 0;
+            if(runnerLane > 2) runnerLane = 2;
+        }
+
+        function startRunnerGame() {
+            document.getElementById('runnerOverlay').classList.add('hidden');
+            runnerActive = true;
+            runnerScore = 0;
+            runnerLives = 3;
+            runnerSpeed = 0.8; // SLOWED DOWN (Was 1)
+            runnerLane = 1; // Center
+            gates = [];
+            
+            updateRunnerUI();
+            generateNewRunnerQuestion();
+            gameLoop();
+        }
+
+        function updateRunnerUI() {
+            document.getElementById('runnerScore').innerText = runnerScore;
+            document.getElementById('runnerLives').innerText = "❤️".repeat(runnerLives);
+            
+            if(runnerTargetZoneSi && currentLang === 'si') {
+                 document.getElementById('runnerQuestionSi').innerText = runnerTargetZoneSi;
+            } else {
+                 document.getElementById('runnerQuestionSi').innerText = "";
+            }
+        }
+
+        function generateNewRunnerQuestion() {
+            // Pick a random number
+            // CHANGED: 6 to 12 digits (Now includes Billions)
+            const len = Math.floor(Math.random() * 7) + 6; 
+            let numStr = "";
+            for(let i=0; i<len; i++) numStr += Math.floor(Math.random() * 10);
+            
+            // Pick a digit index that is NOT Units zone (too easy) if possible
+            const targetIdx = Math.floor(Math.random() * (len-3)); // avoid last 3
+            const pIdx = len - 1 - targetIdx;
+            
+            runnerQuestionNumber = numStr;
+            const zoneIdx = Math.floor(pIdx / 3);
+            
+            const zones = ["Units", "Thousands", "Millions", "Billions"];
+            const zonesSi = ["ඒකක", "දහස්", "මිලියන", "බිලියන"];
+            
+            runnerTargetZone = zones[zoneIdx];
+            runnerTargetZoneSi = `(සොයන්න: ${zonesSi[zoneIdx]} කලාපය)`;
+
+            // Format HTML
+            let html = "";
+            for(let i=0; i<len; i++) {
+                if ((len-1-i) % 3 === 0 && i !== len-1) { // Comma logic approximation (simple)
+                    // Simplified: just highlight the digit
+                }
+                
+                if(i === targetIdx) {
+                    html += `<span class="text-yellow-400 border-b-4 border-yellow-400 mx-1">${numStr[i]}</span>`;
+                } else {
+                    html += `<span class="opacity-50">${numStr[i]}</span>`;
+                }
+                
+                // Add commas for readability
+                if ((len-1-i) % 3 === 0 && (len-1-i) !== 0) html += ",";
+            }
+            document.getElementById('runnerQuestion').innerHTML = html;
+            updateRunnerUI();
+            
+            spawnGate(zoneIdx);
+        }
+
+        function spawnGate(correctZoneIdx) {
+            // Create a gate object
+            // Gate has 3 openings. 
+            // 0: Left, 1: Center, 2: Right
+            
+            const possibleZones = ["Units", "Thousands", "Millions", "Billions"];
+            const wrongZones = possibleZones.filter((_, i) => i !== correctZoneIdx);
+            
+            // Randomly assign correct answer to a lane
+            const correctLane = Math.floor(Math.random() * 3);
+            
+            let laneData = [];
+            let wrongCounter = 0;
+            
+            for(let i=0; i<3; i++) {
+                if(i === correctLane) {
+                    laneData.push({ text: possibleZones[correctZoneIdx], isCorrect: true });
+                } else {
+                    // Pick a random wrong zone, ensuring variety
+                    laneData.push({ text: wrongZones[wrongCounter % wrongZones.length], isCorrect: false });
+                    wrongCounter++;
+                }
+            }
+
+            gates.push({
+                y: -100, // Start above screen
+                lanes: laneData,
+                passed: false
+            });
+        }
+
+        function gameLoop() {
+            if(!runnerActive) return;
+            
+            // Clear
+            runnerCtx.clearRect(0, 0, runnerCanvas.width, runnerCanvas.height);
+            
+            const laneWidth = runnerCanvas.width / 3;
+            
+            // Draw Lanes
+            runnerCtx.strokeStyle = "#334155";
+            runnerCtx.lineWidth = 2;
+            runnerCtx.beginPath();
+            runnerCtx.moveTo(laneWidth, 0); runnerCtx.lineTo(laneWidth, runnerCanvas.height);
+            runnerCtx.moveTo(laneWidth*2, 0); runnerCtx.lineTo(laneWidth*2, runnerCanvas.height);
+            runnerCtx.stroke();
+            
+            // Update & Draw Gates
+            for(let i = 0; i < gates.length; i++) {
+                let g = gates[i];
+                g.y += runnerSpeed;
+                
+                // Draw Gate Bar
+                runnerCtx.fillStyle = "#0f172a";
+                runnerCtx.fillRect(0, g.y, runnerCanvas.width, 40);
+                
+                // Draw Labels
+                runnerCtx.font = "bold 16px Poppins";
+                runnerCtx.textAlign = "center";
+                
+                for(let l=0; l<3; l++) {
+                    // Zone BG
+                    runnerCtx.fillStyle = g.lanes[l].isCorrect ? "#1e293b" : "#1e293b"; // Hide correctness until hit? No, show it.
+                    // Actually game design: Player must read the text.
+                    
+                    // Text
+                    runnerCtx.fillStyle = "#cbd5e1";
+                    runnerCtx.fillText(g.lanes[l].text, l * laneWidth + laneWidth/2, g.y + 25);
+                }
+                
+                // Collision Logic
+                if (g.y > 300 && g.y < 350 && !g.passed) {
+                    g.passed = true;
+                    if (g.lanes[runnerLane].isCorrect) {
+                        // Success
+                        runnerScore += 50;
+                        runnerSpeed += 0.05; // SLOWED DOWN INCREMENT (Was 0.1)
+                        document.getElementById('runnerScore').innerText = runnerScore;
+                        
+                        // Feedback visual
+                        runnerCtx.fillStyle = "rgba(0, 255, 0, 0.3)";
+                        runnerCtx.fillRect(0, 0, runnerCanvas.width, runnerCanvas.height);
+                        
+                        setTimeout(generateNewRunnerQuestion, 500); // Queue next question
+                        
+                    } else {
+                        // Fail
+                        runnerLives--;
+                        updateRunnerUI();
+                        // Shake effect
+                        runnerCanvas.style.transform = "translateX(5px)";
+                        setTimeout(() => runnerCanvas.style.transform = "translateX(0)", 100);
+                        
+                        if(runnerLives <= 0) {
+                            gameOverRunner();
+                            return;
+                        } else {
+                             setTimeout(generateNewRunnerQuestion, 500);
+                        }
+                    }
+                }
+            }
+            
+            // Cleanup off-screen gates
+            gates = gates.filter(g => g.y < runnerCanvas.height + 50);
+
+            // Draw Player
+            const pX = runnerLane * laneWidth + laneWidth/2;
+            const pY = 320;
+            
+            // Player shadow
+            runnerCtx.fillStyle = "rgba(0,0,0,0.5)";
+            runnerCtx.beginPath();
+            runnerCtx.ellipse(pX, pY + 20, 20, 5, 0, 0, Math.PI * 2);
+            runnerCtx.fill();
+            
+            // Player Body
+            runnerCtx.fillStyle = "#3b82f6";
+            runnerCtx.beginPath();
+            runnerCtx.arc(pX, pY, 15, 0, Math.PI * 2);
+            runnerCtx.fill();
+            // Player Head
+            runnerCtx.fillStyle = "#60a5fa";
+            runnerCtx.beginPath();
+            runnerCtx.arc(pX, pY - 10, 10, 0, Math.PI * 2);
+            runnerCtx.fill();
+
+            runnerAnimationId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOverRunner() {
+            runnerActive = false;
+            cancelAnimationFrame(runnerAnimationId);
+            
+            const overlay = document.getElementById('runnerOverlay');
+            overlay.classList.remove('hidden');
+            document.getElementById('runnerTitle').innerText = translations.gameOver[currentLang];
+            document.getElementById('runnerDesc').innerHTML = `${translations.finalScore[currentLang]}: <strong class="text-yellow-400 text-2xl">${runnerScore}</strong>`;
+            
+            const btn = overlay.querySelector('button');
+            btn.innerHTML = `<i class="fas fa-redo mr-2"></i> ${translations.playAgain[currentLang]}`;
+        }
+
+        // ================= UTILITIES =================
+        const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+        const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+        const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+
+        function convertToWords(num) {
+            if (num == 0) return "zero";
+            return convertChunk(num);
+        }
+
+        function convertChunk(n) {
+            if (n < 10) return ones[n];
+            if (n < 20) return teens[n - 10];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + ones[n % 10] : "");
+            if (n < 1000) return ones[Math.floor(n / 100)] + " hundred" + (n % 100 !== 0 ? " " + convertChunk(n % 100) : "");
+            if (n < 1000000) return convertChunk(Math.floor(n / 1000)) + " thousand" + (n % 1000 !== 0 ? " " + convertChunk(n % 1000) : "");
+            if (n < 1000000000) return convertChunk(Math.floor(n / 1000000)) + " million" + (n % 1000000 !== 0 ? " " + convertChunk(n % 1000000) : "");
+            if (n < 1000000000000) return convertChunk(Math.floor(n / 1000000000)) + " billion" + (n % 1000000000 !== 0 ? " " + convertChunk(n % 1000000000) : "");
+            return "Number too large";
+        }
+
+        function convertToWordsSi(str) {
+            let reversed = str.split('').reverse().join('');
+            let chunks = [];
+            for (let i = 0; i < reversed.length; i += 3) {
+                chunks.push(reversed.substring(i, i + 3).split('').reverse().join(''));
+            }
+            
+            const zoneNames = ["", "දහස්", "මිලියන", "බිලියන", "ට්‍රිලියන"];
+            let result = "";
+
+            for (let i = chunks.length - 1; i >= 0; i--) {
+                const chunkVal = parseInt(chunks[i]);
+                if (chunkVal > 0) {
+                     result += `${chunkVal} ${zoneNames[i]} `;
+                }
+            }
+            return result.trim();
+        }
+
+    </script>
+</body>
+</html>
